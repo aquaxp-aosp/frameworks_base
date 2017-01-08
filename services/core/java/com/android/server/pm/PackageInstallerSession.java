@@ -16,7 +16,6 @@
 
 package com.android.server.pm;
 
-import static android.content.pm.PackageManager.INSTALL_SUCCEEDED;
 import static android.content.pm.PackageManager.INSTALL_FAILED_ABORTED;
 import static android.content.pm.PackageManager.INSTALL_FAILED_CONTAINER_ERROR;
 import static android.content.pm.PackageManager.INSTALL_FAILED_INSUFFICIENT_STORAGE;
@@ -207,25 +206,20 @@ public class PackageInstallerSession extends IPackageInstallerSession.Stub {
                     params.appPackageName, PackageManager.GET_SIGNATURES /*flags*/, userId);
             final ApplicationInfo appInfo = mPm.getApplicationInfo(
                     params.appPackageName, 0, userId);
-
             synchronized (mLock) {
                 if (msg.obj != null) {
                     mRemoteObserver = (IPackageInstallObserver2) msg.obj;
                 }
-
                 try {
                     commitLocked(pkgInfo, appInfo);
                 } catch (PackageManagerException e) {
-                    returnCode = e.error;
-                    completeMsg = ExceptionUtils.getCompleteMessage(e);
+                    final String completeMsg = ExceptionUtils.getCompleteMessage(e);
                     Slog.e(TAG, "Commit of session " + sessionId + " failed: " + completeMsg);
                     destroyInternal();
+                    dispatchSessionFinished(e.error, completeMsg, null);
                 }
+                return true;
             }
-            if (returnCode != INSTALL_SUCCEEDED) {
-                dispatchSessionFinished(returnCode, completeMsg, null);
-            }
-            return true;
         }
     };
 
